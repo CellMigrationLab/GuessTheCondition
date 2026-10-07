@@ -23,7 +23,7 @@ def _tools():
 
 
 def test_declarations_are_valid():
-    assert set(_tools()) == {"create_demo_experiment", "prepare_game", "play_round", "undo_last_guess", "analyze_results"}
+    assert set(_tools()) == {"create_demo_experiment", "prepare_game", "list_conditions", "play_round", "undo_last_guess", "analyze_results"}
 
 
 def test_importing_the_declarations_stays_light():
@@ -34,7 +34,7 @@ def test_importing_the_declarations_stays_light():
         "assert not heavy, heavy"
     )
     src = str(Path(__file__).resolve().parents[1] / "src")
-    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env={**os.environ, "PYTHONPATH": src})
+    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env={**os.environ, "PYTHONPATH": os.pathsep.join([src, os.environ.get("PYTHONPATH", "")])})
     assert done.returncode == 0, done.stderr
 
 
@@ -55,3 +55,11 @@ def test_a_guess_is_optional_and_every_other_parameter_has_a_default_or_is_a_fol
 def test_percentage_is_bounded():
     p = next(p for p in _tools()["prepare_game"]["inputs"] if p["name"] == "percentage_to_test")
     assert (p["minimum"], p["maximum"], p["default"]) == (1, 100, 20)
+
+
+def test_play_round_uses_the_interaction_hints():
+    play = _tools()["play_round"]
+    guess = next(i for i in play["inputs"] if i["name"] == "guess")
+    assert guess["choices_from"] == {"tool": "list_conditions", "depends": ["results_folder", "user_name"], "field": "choices"}
+    assert guess["clear_after_run"] and guess["nullable"]
+    assert play["outputs"][0]["replace"] is True

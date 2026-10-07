@@ -63,6 +63,28 @@
     }
   },
   {
+    "tool": "list_conditions",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana"
+    },
+    "comment": "the options for the guess list",
+    "expect": {
+      "status": "COMPLETE"
+    }
+  },
+  {
+    "tool": "list_conditions",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Nobody"
+    },
+    "comment": "no game for this name",
+    "expect": {
+      "status": "FAILED"
+    }
+  },
+  {
     "tool": "play_round",
     "inputs": {
       "results_folder": "fixtures/results",
