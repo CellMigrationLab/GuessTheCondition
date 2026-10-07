@@ -21,6 +21,8 @@ from typing import Annotated, Optional
 
 from labconstrictor_tools import (
     Advanced,
+    ChoicesFrom,
+    ClearAfterRun,
     Description,
     FileOut,
     Folder,
@@ -31,6 +33,7 @@ from labconstrictor_tools import (
     Min,
     Name,
     Axes,
+    Replace,
     Scalars,
     TableOut,
     ToolError,
@@ -96,6 +99,19 @@ def prepare_game(
     }
 
 
+@tool("Show the conditions")
+def list_conditions(results_folder: _RESULTS, user_name: _USER = "YourName") -> Scalars:
+    """The conditions you can name in 'Play a round' (needs a game prepared for this name). Hosts use it to fill the guess list."""
+    from guessthecondition import Session
+    from guessthecondition.session import GameError
+
+    try:
+        session = Session.open(results_folder, user_name)
+    except GameError as error:
+        raise _game_error(error) from error
+    return {"choices": list(session.conditions), "conditions": session.conditions_text()}
+
+
 @tool("Play a round")
 def play_round(
     results_folder: _RESULTS,
@@ -103,9 +119,11 @@ def play_round(
     guess: Annotated[
         Optional[str],
         Group("Game"),
+        ChoicesFrom("list_conditions", depends=["results_folder", "user_name"]),
+        ClearAfterRun(),
         Description("Your guess for the image on screen: a condition name or its number in the list. Leave unset to see the first image. Change it every round"),
     ] = None,
-) -> tuple[Annotated[ImageOut, Name("image"), Axes("YX")], Scalars]:
+) -> tuple[Annotated[ImageOut, Name("image"), Axes("YX"), Replace()], Scalars]:
     """Record your guess (when you give one) and show the next image. The condition of an image is never shown."""
     from guessthecondition import Session, load_for_display, tile_channels
     from guessthecondition.session import GameError
