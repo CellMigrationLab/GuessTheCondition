@@ -16,6 +16,7 @@ __version__ = "0.1.0"
 
 from .analysis import Analysis, Readout, analyze
 from .dataset import describe, scan_experiment
+from .demo import make_demo_experiment
 from .images import load_for_display, tile_channels
 from .session import GameError, Session
 
@@ -27,6 +28,7 @@ __all__ = [
     "analyze",
     "describe",
     "load_for_display",
+    "make_demo_experiment",
     "scan_experiment",
     "tile_channels",
 ]

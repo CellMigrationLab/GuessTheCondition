@@ -54,10 +54,11 @@ Press the *Open in Colab* badge above: the notebook installs the package and mou
 
 ### 3. Napari and Fiji (tools)
 
-The installer also registers four tools for the [LabConstrictor tools bridge](https://github.com/CellMigrationLab/LabConstrictor-Tools), so that [Napari](https://github.com/CellMigrationLab/napari-labconstrictor) (Plugins > LabConstrictor tools) and [Fiji](https://github.com/CellMigrationLab/LabConstrictor-Fiji) (Plugins > LabConstrictor > LabConstrictor Tools...) show them as forms, and so that the command line can run them:
+The installer also registers five tools for the [LabConstrictor tools bridge](https://github.com/CellMigrationLab/LabConstrictor-Tools), so that [Napari](https://github.com/CellMigrationLab/napari-labconstrictor) (Plugins > LabConstrictor tools) and [Fiji](https://github.com/CellMigrationLab/LabConstrictor-Fiji) (Plugins > LabConstrictor > LabConstrictor Tools...) show them as forms, and so that the command line can run them:
 
 | Tool | What it does |
 |---|---|
+| **Create a demo experiment** | Makes a small synthetic experiment (two conditions, three repeats) to try the game before using your own images. |
 | **Prepare the game** | Scans the experiment folder and starts (or resumes) your game. |
 | **Play a round** | Records your guess for the image on screen (a condition name or its number; leave it unset the first time) and shows the next image. The condition is never shown. |
 | **Undo my last guess** | Forgets the last guess; that image is shown again. |
@@ -68,6 +69,7 @@ In Napari, the guess field keeps its value between runs: change it for every ima
 From a terminal (use the Python of the installed app):
 
 ```
+<install folder>/bin/python -m labconstrictor_tools run GuessTheCondition create_demo_experiment output_folder=.      # optional, to try the game
 <install folder>/bin/python -m labconstrictor_tools run GuessTheCondition prepare_game experiment_folder=Experiments results_folder=Results user_name=Ana
 <install folder>/bin/python -m labconstrictor_tools run GuessTheCondition play_round results_folder=Results user_name=Ana
 <install folder>/bin/python -m labconstrictor_tools run GuessTheCondition play_round results_folder=Results user_name=Ana guess=Mutant

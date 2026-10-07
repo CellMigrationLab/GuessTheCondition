@@ -6,6 +6,7 @@ This module only *declares* the tools: it imports `labconstrictor_tools` and the
 
 A game is played in three steps, each one run of a tool; the state lives in the results folder, so the steps are independent:
 
+    labconstrictor-tools run GuessTheCondition create_demo_experiment output_folder=.      # optional: a demo experiment to try
     labconstrictor-tools run GuessTheCondition prepare_game experiment_folder=Experiments results_folder=Results user_name=Ana
     labconstrictor-tools run GuessTheCondition play_round   results_folder=Results user_name=Ana              # shows an image
     labconstrictor-tools run GuessTheCondition play_round   results_folder=Results user_name=Ana guess=Mutant # records it, shows the next
@@ -45,6 +46,21 @@ _USER = Annotated[str, Group("Game"), Label("Your name"), Description("Names you
 
 def _game_error(error):
     return ToolError(error.code, error.message)
+
+
+@tool("Create a demo experiment")
+def create_demo_experiment(
+    output_folder: Annotated[Folder, Group("Demo"), Description("An existing folder; the demo experiment is made inside it, in a folder called GuessTheCondition_demo")],
+    images_per_repeat: Annotated[int, Min(1), Max(50), Group("Demo"), Description("Images per condition and repeat (2 conditions x 3 repeats)")] = 4,
+) -> Scalars:
+    """Make a small synthetic experiment (two conditions, three repeats) to try the game before using your own images."""
+    from guessthecondition import make_demo_experiment
+
+    try:
+        root = make_demo_experiment(output_folder, images_per_repeat)
+    except FileExistsError as error:
+        raise ToolError("already_exists", str(error)) from error
+    return {"experiment_folder": str(root), "images": 2 * 3 * int(images_per_repeat), "next": "Use this folder as the experiment folder of 'Prepare the game'"}
 
 
 @tool("Prepare the game")
