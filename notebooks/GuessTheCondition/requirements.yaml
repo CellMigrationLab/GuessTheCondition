@@ -1,0 +1,12 @@
+dependencies:
+- numpy==2.0.2
+- pandas==2.2.2
+- scipy==1.16.3
+- matplotlib==3.10.0
+- tifffile==2026.4.11
+- ipywidgets==8.1.7
+description: "Guess the Condition: classify microscopy images by experimental condition, without seeing the condition, and find out whether the conditions can be told apart across biological repeats."
+linux_dependencies: []
+macos_dependencies: []
+python_version: "3.12"
+windows_dependencies: []

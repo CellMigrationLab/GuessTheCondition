@@ -1,0 +1,263 @@
+[
+  {
+    "tool": "prepare_game",
+    "inputs": {
+      "experiment_folder": "fixtures/experiment",
+      "results_folder": "fixtures/results",
+      "user_name": "Ana",
+      "percentage_to_test": 25,
+      "restart": true,
+      "random_seed": 7
+    },
+    "comment": "a new game: 25% of 12 images = 3",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "images": 12,
+          "to_guess": 3,
+          "guessed": 0,
+          "remaining": 3,
+          "conditions": "1: Control | 2: Mutant"
+        }
+      }
+    }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana"
+    },
+    "comment": "the first image, nothing to record yet",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "image": "1 of 3",
+          "conditions": "1: Control | 2: Mutant"
+        }
+      },
+      "progress_events_min": 1
+    }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana",
+      "guess": "Control"
+    },
+    "comment": "records the guess (a name), shows the next",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "image": "2 of 3"
+        }
+      }
+    }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana",
+      "guess": "Nonsense"
+    },
+    "comment": "a guess that is not a condition is explained",
+    "expect": {
+      "status": "FAILED",
+      "code": "unknown_condition",
+      "message_contains": "Choose one of: 1: Control | 2: Mutant"
+    }
+  },
+  {
+    "tool": "undo_last_guess",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana"
+    },
+    "comment": "the last guess is forgotten",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "forgotten_guess": "Control",
+          "guessed": 0
+        }
+      }
+    }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana",
+      "guess": "2"
+    },
+    "comment": "a guess by number; the image undone before is guessed now",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "image": "2 of 3"
+        }
+      }
+    }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana",
+      "guess": "mutant"
+    },
+    "comment": "a name in any case",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "image": "3 of 3"
+        }
+      }
+    }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana",
+      "guess": "Control"
+    },
+    "comment": "the last guess is saved and the game says it is over",
+    "expect": {
+      "status": "FAILED",
+      "code": "no_result",
+      "message_contains": "last image"
+    }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana"
+    },
+    "comment": "nothing left to guess",
+    "expect": {
+      "status": "FAILED",
+      "code": "finished",
+      "message_contains": "Thank you"
+    }
+  },
+  {
+    "tool": "analyze_results",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana"
+    },
+    "comment": "the analysis of 3 guesses (a pilot: no verdict across repeats)",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "images_guessed": 3
+        }
+      }
+    }
+  },
+  {
+    "tool": "prepare_game",
+    "inputs": {
+      "experiment_folder": "fixtures/experiment",
+      "results_folder": "fixtures/results",
+      "user_name": "Ana",
+      "percentage_to_test": 100
+    },
+    "comment": "resuming keeps the guesses and takes the new percentage",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "guessed": 3,
+          "to_guess": 12,
+          "remaining": 9
+        }
+      }
+    }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Ana"
+    },
+    "comment": "and goes on",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "image": "4 of 12"
+        }
+      }
+    }
+  },
+  {
+    "tool": "prepare_game",
+    "inputs": {
+      "experiment_folder": "fixtures/experiment",
+      "results_folder": "fixtures/results",
+      "user_name": "a/b"
+    },
+    "comment": "a name that is not a folder name",
+    "expect": {
+      "status": "FAILED",
+      "code": "bad_user_name",
+      "message_contains": "folder name"
+    }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Nobody"
+    },
+    "comment": "no game for this player",
+    "expect": {
+      "status": "FAILED",
+      "code": "no_session",
+      "message_contains": "prepare the game first"
+    }
+  },
+  {
+    "tool": "prepare_game",
+    "inputs": {
+      "experiment_folder": "fixtures/experiment",
+      "results_folder": "fixtures/results",
+      "user_name": "Fresh",
+      "restart": true
+    },
+    "comment": "a second player",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "guessed": 0
+        }
+      }
+    }
+  },
+  {
+    "tool": "analyze_results",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Fresh"
+    },
+    "comment": "nothing guessed yet",
+    "expect": {
+      "status": "FAILED",
+      "code": "no_guesses",
+      "message_contains": "play some rounds first"
+    }
+  }
+]
