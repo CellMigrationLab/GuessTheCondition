@@ -1,16 +1,17 @@
 name: GuessTheCondition
-version: 0.1.0
+version: 0.0.0
 environment_file: environment.yaml
 installer_type: all
 license_file: LICENSE
 welcome_image: app/logo/logo.png
 header_image: app/logo/logo.png
 icon_image: app/logo/guessthecondition.png
-conclusion_text: Thank you! You have successfully installed GuessTheCondition 0.1.0.
+conclusion_text: Thank you! You have successfully installed GuessTheCondition 0.0.0.
 keep_pkgs: false
 register_python: false
 initialize_conda: false
 extra_files:
+- .tools/meta/src_change.yaml: GuessTheCondition/src_change.yaml
 - app/bash_bat_scripts/pre_uninstall.sh: pre_uninstall.sh
 - app/bash_bat_scripts/uninstall.sh: uninstall.sh
 - app/logo/guessthecondition.icns: GuessTheCondition/guessthecondition.icns
@@ -31,6 +32,7 @@ extra_files:
 - src/guessthecondition/__init__.py: GuessTheCondition/src/guessthecondition/__init__.py
 - src/guessthecondition/analysis.py: GuessTheCondition/src/guessthecondition/analysis.py
 - src/guessthecondition/dataset.py: GuessTheCondition/src/guessthecondition/dataset.py
+- src/guessthecondition/demo.py: GuessTheCondition/src/guessthecondition/demo.py
 - src/guessthecondition/images.py: GuessTheCondition/src/guessthecondition/images.py
 - src/guessthecondition/report.py: GuessTheCondition/src/guessthecondition/report.py
 - src/guessthecondition/session.py: GuessTheCondition/src/guessthecondition/session.py
