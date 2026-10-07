@@ -298,5 +298,18 @@
       "code": "no_guesses",
       "message_contains": "play some rounds first"
     }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Fresh",
+      "guess": "   "
+    },
+    "comment": "blank guess is refused",
+    "expect": {
+      "status": "FAILED",
+      "code": "empty_guess"
+    }
   }
 ]

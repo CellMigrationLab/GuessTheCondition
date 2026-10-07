@@ -18,7 +18,7 @@ from .analysis import Analysis, Readout, analyze
 from .dataset import describe, scan_experiment
 from .demo import make_demo_experiment
 from .images import load_for_display, tile_channels
-from .session import GameError, Session
+from .session import GameError, Session, read_results
 
 __all__ = [
     "Analysis",
@@ -28,6 +28,7 @@ __all__ = [
     "analyze",
     "describe",
     "load_for_display",
+    "read_results",
     "make_demo_experiment",
     "scan_experiment",
     "tile_channels",

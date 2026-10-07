@@ -16,6 +16,7 @@ A game is played in three steps, each one run of a tool; the state lives in the 
     labconstrictor-tools test  --module guessthecondition_lc_tools --cases lc_tests/cases.json
 """
 
+import time
 from typing import Annotated, Optional
 
 from labconstrictor_tools import (
@@ -109,11 +110,15 @@ def play_round(
     from guessthecondition import Session, load_for_display, tile_channels
     from guessthecondition.session import GameError
 
+    called_at = time.time()  # the guess is timed when the tool starts, not after the imports and the image loading below
     recorded = None
     try:
         session = Session.open(results_folder, user_name)
-        recorded = session.answer(guess) if guess is not None and str(guess).strip() else None
-        item = session.serve()
+        if guess is not None and not str(guess).strip():
+            raise GameError("empty_guess", "The guess is ticked but empty: type a condition name or its number (%s), or untick it to see the image again." % session.conditions_text())
+        recorded = session.answer(guess, now=called_at) if guess is not None else None
+        progress(0.4, "loading the next image")
+        item, tiled, skipped = session.serve_readable(lambda path: tile_channels(load_for_display(path)))
     except GameError as error:
         if error.code == "finished" and recorded is not None:
             raise ToolError(
@@ -122,13 +127,16 @@ def play_round(
                 % (recorded["guess"], recorded["decision_time_s"], session.target),
             ) from error
         raise _game_error(error) from error
-    progress(0.5, "loading the image")
-    image = tile_channels(load_for_display(item["path"]))
+    image = tiled
+    if item["fresh"]:
+        session.start_clock()  # the image is ready: from here on the player is looking at it
     values = {
         "image": "%d of %d" % (item["number"], item["of"]),
         "conditions": session.conditions_text(),
         "how_to_answer": "Run again with your guess: a condition name or its number",
     }
+    if skipped:
+        values["left_out_unreadable"] = ", ".join(skipped)
     if recorded is not None:
         values["recorded"] = "%s (%.1f s)" % (recorded["guess"], recorded["decision_time_s"])
     return image, values
@@ -152,7 +160,7 @@ def undo_last_guess(results_folder: _RESULTS, user_name: _USER = "YourName") -> 
 def analyze_results(
     results_folder: _RESULTS,
     user_name: _USER = "YourName",
-    random_seed: Annotated[Optional[int], Min(0), Group("Game"), Advanced(), Description("Seed of the permutation test of the repeats; unset = 0")] = None,
+    random_seed: Annotated[Optional[int], Min(0), Group("Game"), Advanced(), Description("Seed of the randomization tests; unset = 0")] = None,
 ) -> tuple[
     Scalars,
     Annotated[TableOut, Name("by_repeat")],
@@ -173,7 +181,7 @@ def analyze_results(
     except GameError as error:
         raise _game_error(error) from error
     progress(0.2, "computing")
-    analysis = analyze(answered, seed=0 if random_seed is None else int(random_seed))
+    analysis = analyze(session.table, seed=0 if random_seed is None else int(random_seed))  # the whole table: chance comes from the experiment
     check_cancel()
     progress(0.6, "drawing the figures and writing the report")
     paths = write_report(analysis, answered, session.folder / "analysis")
@@ -190,7 +198,7 @@ def analyze_results(
     }
     if across["p"] == across["p"]:
         values["p_across_repeats"] = round(across["p"], 5)
-    values["p_all_images_exploratory"] = round(analysis.p_images, 5)
+    values["p_randomization_these_images_exploratory"] = round(analysis.p_randomization, 5)
     if analysis.notes:
         values["notes"] = " ".join(analysis.notes)
     return values, analysis.per_repeat, analysis.per_condition, paths["analysis_results.pdf"]

@@ -30,8 +30,15 @@ from .dataset import DATASET_COLUMNS, scan_experiment
 
 TABLE_NAME = "game_results.csv"
 STATE_NAME = "session.json"
-TABLE_COLUMNS = [*DATASET_COLUMNS, "play_order", "guess", "decision_time_s", "answered_at"]
+TABLE_COLUMNS = [*DATASET_COLUMNS, "play_order", "guess", "decision_time_s", "answered_at", "skipped"]
+RESUME_GAP_S = 600  # an image shown again within this time keeps its clock (the player never looked away); later, the clock restarts
 _LEGACY = {"Filename": None, "Condition": "condition", "Repeat": "biological_repeat", "UserGuess": "guess", "DecisionTime": "decision_time_s"}
+
+
+def read_results(path) -> pd.DataFrame:
+    """Read a ``game_results.csv``. The text columns are read as text: folders named with digits (conditions ``10``, ``20``,
+    repeats ``1``, ``2``) must not turn into numbers, and a guess column holding numbers and gaps must not turn into floats."""
+    return pd.read_csv(path, dtype={c: str for c in ("image_file", "condition", "biological_repeat", "guess", "answered_at", "skipped")})
 
 
 class GameError(Exception):
@@ -120,6 +127,7 @@ class Session:
         table["guess"] = None
         table["decision_time_s"] = np.nan
         table["answered_at"] = None
+        table["skipped"] = None
         state = {
             "version": 1,
             "experiment_dir": str(experiment_dir.resolve()),
@@ -143,7 +151,7 @@ class Session:
 
     @classmethod
     def _resume(cls, folder: Path, experiment_dir: Path | None):
-        table = pd.read_csv(folder / TABLE_NAME)
+        table = read_results(folder / TABLE_NAME)
         state_path = folder / STATE_NAME
         if state_path.exists():
             state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -160,10 +168,12 @@ class Session:
                 "pending": None,
                 "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             }
+        if "skipped" not in table.columns:
+            table["skipped"] = None
         for column in TABLE_COLUMNS:
             if column not in table.columns:
                 raise GameError("bad_results", "%s lacks the column '%s'." % (folder / TABLE_NAME, column))
-        for column in ("guess", "answered_at"):  # an empty column is read as float: it must be able to hold text
+        for column in ("guess", "answered_at", "skipped"):  # an empty column is read as float: it must be able to hold text
             table[column] = table[column].astype(object).where(table[column].notna(), None)
         table["decision_time_s"] = pd.to_numeric(table["decision_time_s"], errors="coerce")
         return cls(folder, table.sort_values("play_order").reset_index(drop=True), state)
@@ -188,6 +198,7 @@ class Session:
         missing = fresh[~fresh["image_file"].isin(known.index)]
         table = pd.concat([table.drop(columns=["FilePath", "Filename"], errors="ignore"), missing], ignore_index=True)
         table["answered_at"] = None
+        table["skipped"] = None
         done = table["guess"].notna().to_numpy()
         order = np.empty(len(table), dtype=int)
         order[np.concatenate([np.flatnonzero(done), np.flatnonzero(~done)])] = np.arange(len(table))
@@ -195,6 +206,12 @@ class Session:
         return table[TABLE_COLUMNS]
 
     # ---- state ---------------------------------------------------------------
+    def reload(self) -> None:
+        """Read the table and the state from the folder again: another front end (Napari, Fiji, the notebook) may have played
+        since this object was made, and saving a stale copy would erase its guesses. Called before every change."""
+        fresh = self._resume(self.folder, None)
+        self.table, self.state = fresh.table, fresh.state
+
     def save(self) -> None:
         text = self.table[TABLE_COLUMNS].to_csv(index=False)
         _write_atomic(self.folder / TABLE_NAME, text)
@@ -210,7 +227,8 @@ class Session:
 
     @property
     def total(self) -> int:
-        return len(self.table)
+        """The images that can be played (those that could not be read are left out)."""
+        return int(self.table["skipped"].isna().sum())
 
     @property
     def target(self) -> int:
@@ -229,7 +247,14 @@ class Session:
         """The images guessed so far (for ``analyze``), with the true ``condition``."""
         return self.table[self.table["guess"].notna()].sort_values("play_order").reset_index(drop=True)
 
+    @property
+    def numbered(self) -> bool:
+        """Conditions can be guessed by number, unless a condition is itself named with digits (then only names count)."""
+        return not any(c.strip().isdigit() for c in self.conditions)
+
     def conditions_text(self) -> str:
+        if not self.numbered:
+            return " | ".join(self.conditions)
         return " | ".join("%d: %s" % (i, c) for i, c in enumerate(self.conditions, 1))
 
     def status(self) -> dict:
@@ -239,6 +264,7 @@ class Session:
             "guessed": self.n_answered,
             "remaining": self.remaining,
             "conditions": self.conditions_text(),
+            **({"unreadable_images_left_out": int(self.table["skipped"].notna().sum())} if self.table["skipped"].notna().any() else {}),
         }
 
     # ---- playing -------------------------------------------------------------
@@ -246,6 +272,7 @@ class Session:
         """The image to guess: the one still waiting for an answer, else the next in the play order. Returns ``{"number",
         "path", "of"}`` (``number`` counts from 1, ``of`` is the number of images to guess); starts the clock for the guess.
         ``GameError('finished')`` when the percentage to test has been reached."""
+        self.reload()
         now = time.time() if now is None else now
         pending = self.state.get("pending")
         if pending is None:
@@ -254,31 +281,73 @@ class Session:
                     "finished",
                     "All %d images to guess have been guessed. Thank you! Analyse the results, or raise the percentage to go on." % self.target,
                 )
-            unanswered = self.table[self.table["guess"].isna()]
+            unanswered = self.table[self.table["guess"].isna() & self.table["skipped"].isna()]
             if unanswered.empty:
                 raise GameError("finished", "Every image of the experiment has been guessed.")
-            pending = {"image_file": unanswered.iloc[0]["image_file"]}
-        pending["served_at"] = now
+            pending = {"image_file": unanswered.iloc[0]["image_file"], "served_at": now}
+            fresh = True
+        elif now - float(pending.get("last_seen", pending["served_at"])) > RESUME_GAP_S:
+            pending["served_at"] = now  # the player came back after a break: the clock starts again
+            fresh = True
+        else:
+            fresh = False
+        pending["last_seen"] = now
         self.state["pending"] = pending
         self.save()
         return {
             "number": self.n_answered + 1,
             "of": self.target,
             "path": self.experiment_dir / pending["image_file"],
+            "fresh": fresh,   # the clock of this image was (re)started now
         }
 
+    def start_clock(self, now: float | None = None) -> None:
+        """(Re)start the clock of the image on screen. A front end calls it when the image is ready to be displayed, so that the
+        time to read the file is not counted as thinking time."""
+        self.reload()
+        pending = self.state.get("pending")
+        if pending is not None:
+            now = time.time() if now is None else now
+            pending["served_at"] = pending["last_seen"] = now
+            self.save()
+
+    def serve_readable(self, loader, now: float | None = None):
+        """``serve`` and read the image with ``loader(path)``; an image that cannot be read is left out of the game (its reason
+        is kept in the ``skipped`` column) and the next one is served. Returns ``(item, data, skipped_names)``."""
+        skipped = []
+        while True:
+            item = self.serve(now)
+            try:
+                return item, loader(item["path"]), skipped
+            except Exception as error:  # noqa: BLE001 - any unreadable file must not block the game
+                self.skip_pending("%s: %s" % (type(error).__name__, error))
+                skipped.append(item["path"].name)
+
+    def skip_pending(self, reason: str) -> None:
+        """Leave the image on screen out of the game (it could not be read)."""
+        self.reload()
+        pending = self.state.get("pending")
+        if pending is None:
+            return
+        row = self.table.index[self.table["image_file"] == pending["image_file"]]
+        if len(row) == 1:
+            self.table.loc[row[0], "skipped"] = str(reason)[:300]
+        self.state["pending"] = None
+        self.save()
+
     def resolve_guess(self, guess: str) -> str:
-        """A condition from its name (any case) or its number in ``conditions_text``."""
+        """A condition from its name (any case) or, when the conditions are numbered, its number."""
         text = (guess or "").strip()
         names = {c.lower(): c for c in self.conditions}
         if text.lower() in names:
             return names[text.lower()]
-        if text.isdigit() and 1 <= int(text) <= len(self.conditions):
+        if self.numbered and text.isdigit() and 1 <= int(text) <= len(self.conditions):
             return self.conditions[int(text) - 1]
         raise GameError("unknown_condition", "'%s' is not a condition. Choose one of: %s" % (guess, self.conditions_text()))
 
     def answer(self, guess: str, now: float | None = None) -> dict:
         """Record the guess for the image being shown and the time it took. Returns ``{"guess", "decision_time_s"}``."""
+        self.reload()
         now = time.time() if now is None else now
         pending = self.state.get("pending")
         if pending is None:
@@ -298,13 +367,15 @@ class Session:
 
     def undo_last(self) -> dict:
         """Forget the last guess (the image is shown again next, its clock restarting)."""
+        self.reload()
         last = self.state.get("last_answered")
         row = self.table.index[self.table["image_file"] == last] if last else []
         if len(row) != 1 or pd.isna(self.table.loc[row[0], "guess"]):
             raise GameError("nothing_to_undo", "There is no guess to undo.")
         forgotten = self.table.loc[row[0], "guess"]
         self.table.loc[row[0], ["guess", "decision_time_s", "answered_at"]] = [None, np.nan, None]
-        self.state["pending"] = {"image_file": last, "served_at": time.time()}
+        now = time.time()
+        self.state["pending"] = {"image_file": last, "served_at": now, "last_seen": now}
         self.state["last_answered"] = None
         self.save()
         return {"forgotten_guess": forgotten}

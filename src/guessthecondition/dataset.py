@@ -48,6 +48,10 @@ def scan_experiment(folder) -> pd.DataFrame:
     if not rows:
         raise ValueError("No TIFF image was found in %s.\n%s" % (folder, STRUCTURE_HELP))
     table = pd.DataFrame(rows, columns=DATASET_COLUMNS)
+    names = pd.Series(table["condition"].unique())
+    clash = names[names.str.lower().duplicated(keep=False)]
+    if len(clash):
+        raise ValueError("Conditions that differ only in upper/lower case cannot be told apart in a guess: %s. Rename one folder." % ", ".join(sorted(clash)))
     if table["condition"].nunique() < 2:
         raise ValueError(
             "Only one condition was found (%s): the game needs at least two.\n%s" % (table["condition"].iloc[0], STRUCTURE_HELP)

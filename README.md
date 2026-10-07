@@ -93,7 +93,7 @@ print(analysis.text())
 
 The rules are those of the other MorphoBricks tools ([MorphoCoverage](https://github.com/CellMigrationLab/MorphoCoverage)):
 
-- **The biological repeat is the replicate.** Images of one repeat are not independent. The answer is the accuracy of each repeat compared with chance across the repeats (a one-sided t-test on accuracy minus chance, from 3 repeats). With one or two repeats the numbers are shown but no verdict is given.
+- **The biological repeat is the replicate.** Images of one repeat are not independent. The answer is the accuracy of each repeat compared with chance across the repeats (a one-sided t-test on accuracy minus chance, from 3 repeats). Chance is the share of the most common condition in your experiment, so an unbalanced design is not flattered. Images of the same repeat folder name count as the same biological repeat. With one or two repeats there is no verdict about the experiment; instead a **randomization test** says whether you beat chance on *these images* (true labels are shuffled within each repeat, 10 000 times). It is exploratory and does not generalise to new repeats.
 - **Chance** is the accuracy of someone who ignores the images and always names the most common condition (1 / number of conditions when balanced, as the order of the images makes them).
 - The test on **all images pooled** (exact binomial) and the test of whether the repeats differ are shown as *exploratory*: they count every image as independent, so their false-positive chance is higher than stated.
 - ✅ the conditions can be told apart across repeats · ⚠️ a trend only · ➖ no conclusion possible, or not above chance · ❌ check the data first. It never says "confirmed", and a null result is said as a result.
