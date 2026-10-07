@@ -30,6 +30,7 @@ from labconstrictor_tools import (
     ImageOut,
     Label,
     Max,
+    MessageOut,
     Min,
     Name,
     Axes,
@@ -180,6 +181,7 @@ def analyze_results(
     user_name: _USER = "YourName",
     random_seed: Annotated[Optional[int], Min(0), Group("Game"), Advanced(), Description("Seed of the randomization tests; unset = 0")] = None,
 ) -> tuple[
+    Annotated[MessageOut, Name("readout")],
     Scalars,
     Annotated[TableOut, Name("by_repeat")],
     Annotated[TableOut, Name("by_condition")],
@@ -219,4 +221,7 @@ def analyze_results(
     values["p_randomization_these_images_exploratory"] = round(analysis.p_randomization, 5)
     if analysis.notes:
         values["notes"] = " ".join(analysis.notes)
-    return values, analysis.per_repeat, analysis.per_condition, paths["analysis_results.pdf"]
+    readout = "%s **%s**\n\n%s" % (analysis.readout.marker, analysis.readout.chip, analysis.readout.text)
+    if analysis.notes:
+        readout += "\n\n" + " ".join(analysis.notes)
+    return readout, values, analysis.per_repeat, analysis.per_condition, paths["analysis_results.pdf"]

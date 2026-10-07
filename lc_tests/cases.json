@@ -223,6 +223,9 @@
       "results": {
         "values": {
           "images_guessed": 3
+        },
+        "readout": {
+          "contains": "3"
         }
       }
     }
