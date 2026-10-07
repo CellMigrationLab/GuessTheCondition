@@ -1,5 +1,44 @@
 [
   {
+    "tool": "create_demo_experiment",
+    "inputs": {
+      "output_folder": "fixtures/results",
+      "images_per_repeat": 2
+    },
+    "comment": "a demo experiment to try the game (2 conditions x 3 repeats x 2 images)",
+    "expect": {
+      "max_seconds": 120,
+      "results": {
+        "values": {
+          "images": 12
+        }
+      }
+    }
+  },
+  {
+    "tool": "create_demo_experiment",
+    "inputs": {
+      "output_folder": "fixtures/results",
+      "images_per_repeat": 2
+    },
+    "comment": "nothing is overwritten",
+    "expect": {
+      "status": "FAILED",
+      "code": "already_exists",
+      "message_contains": "already exists"
+    }
+  },
+  {
+    "tool": "create_demo_experiment",
+    "inputs": {
+      "output_folder": "fixtures/nope"
+    },
+    "comment": "a folder that does not exist is refused",
+    "expect": {
+      "status": "FAILED"
+    }
+  },
+  {
     "tool": "prepare_game",
     "inputs": {
       "experiment_folder": "fixtures/experiment",
@@ -258,6 +297,19 @@
       "status": "FAILED",
       "code": "no_guesses",
       "message_contains": "play some rounds first"
+    }
+  },
+  {
+    "tool": "play_round",
+    "inputs": {
+      "results_folder": "fixtures/results",
+      "user_name": "Fresh",
+      "guess": "   "
+    },
+    "comment": "blank guess is refused",
+    "expect": {
+      "status": "FAILED",
+      "code": "empty_guess"
     }
   }
 ]

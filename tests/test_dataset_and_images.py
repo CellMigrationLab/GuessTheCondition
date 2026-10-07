@@ -88,3 +88,22 @@ def test_flat_channel_does_not_divide_by_zero():
 def test_missing_image_is_explained(tmp_path):
     with pytest.raises(FileNotFoundError, match="image not found"):
         load_for_display(tmp_path / "nope.tif")
+
+
+def test_demo_experiment_is_scannable_deterministic_and_never_overwrites(tmp_path):
+    from guessthecondition import make_demo_experiment
+
+    first = tmp_path / "a"
+    first.mkdir()
+    root = make_demo_experiment(first, images_per_repeat=2)
+    table = scan_experiment(root)
+    assert len(table) == 2 * 3 * 2 and set(table["condition"]) == {"Control", "Treated"}
+    other = tmp_path / "b"
+    other.mkdir()
+    again = make_demo_experiment(other, images_per_repeat=2)
+    assert (tifffile.imread(root / "Control/R1/FOV1.tif") == tifffile.imread(again / "Control/R1/FOV1.tif")).all()
+    with pytest.raises(FileExistsError):
+        make_demo_experiment(first, images_per_repeat=2)
+    # the two conditions look different once each image is normalised for display (more spots in Treated)
+    c, t = (load_for_display(root / f"{k}/R1/FOV1.tif")[0] for k in ("Control", "Treated"))
+    assert (t > 0.3).mean() > 1.5 * (c > 0.3).mean()

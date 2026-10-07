@@ -31,7 +31,7 @@ def test_play_through_and_resume(experiment, tmp_path):
     for k in range(3):
         item = s.serve(now=100.0 + 10 * k)
         assert item["number"] == k + 1 and item["of"] == 9
-        assert set(item) == {"number", "of", "path"}  # nothing that names the condition
+        assert set(item) == {"number", "of", "path", "fresh"}  # nothing that names the condition
         seen.append(item["path"])
         result = s.answer("control", now=100.0 + 10 * k + 4.5)  # name in any case
         assert result == {"guess": "Control", "decision_time_s": 4.5}
@@ -45,11 +45,65 @@ def test_play_through_and_resume(experiment, tmp_path):
 def test_a_shown_image_stays_pending_until_answered(experiment, tmp_path):
     s = Session.create(experiment, tmp_path, "Ana", 50, seed=2)
     first = s.serve(now=10)
-    reopened = Session.open(tmp_path, "Ana")
-    again = reopened.serve(now=500)
+    again = Session.open(tmp_path, "Ana").serve(now=20)
     assert again["path"] == first["path"] and again["number"] == 1
-    assert reopened.answer("1", now=502)["decision_time_s"] == 2.0  # the clock restarted when the image was shown again
-    assert Session.open(tmp_path, "Ana").n_answered == 1
+    assert Session.open(tmp_path, "Ana").n_answered == 0
+
+
+def test_the_clock_runs_from_the_first_display_unless_the_player_came_back_after_a_break(experiment, tmp_path):
+    s = Session.create(experiment, tmp_path, "Ana", 50, seed=2)
+    s.serve(now=100)
+    s.serve(now=130)                      # "show it again": the player has been looking at it all along
+    assert s.answer("1", now=145)["decision_time_s"] == 45
+    s.serve(now=200)
+    s.serve(now=200 + 601)                # came back after more than ten minutes: the clock starts again
+    assert s.answer("1", now=801 + 7)["decision_time_s"] == 7
+
+
+def test_two_front_ends_do_not_erase_each_others_guesses(experiment, tmp_path):
+    napari = Session.create(experiment, tmp_path, "Ana", 100, seed=2)
+    notebook = Session.open(tmp_path, "Ana")      # opened before the other one plays
+    for k in range(3):
+        napari.serve(now=10 * k); napari.answer("1", now=10 * k + 1)
+    notebook.serve(now=40)
+    notebook.answer("2", now=41)                  # a stale copy must not overwrite the three guesses of the other
+    final = Session.open(tmp_path, "Ana")
+    assert final.n_answered == 4 and list(final.answered()["guess"]) == ["Control", "Control", "Control", "Drug"]
+
+
+def test_numeric_condition_names_disable_numbers(tmp_path):
+    import tifffile
+    for c in ("10", "2"):
+        for r in ("R1", "R2"):
+            (tmp_path / "E" / c / r).mkdir(parents=True)
+            tifffile.imwrite(tmp_path / "E" / c / r / "a.tif", np.zeros((4, 4), np.uint8))
+    s = Session.create(tmp_path / "E", tmp_path / "R", "Ana", 100)
+    assert not s.numbered and s.conditions_text() == "10 | 2"
+    s.serve()
+    assert s.resolve_guess("2") == "2" and s.resolve_guess("10") == "10"
+    with pytest.raises(GameError):
+        s.resolve_guess("3")
+
+
+def test_conditions_that_differ_only_in_case_are_refused(tmp_path):
+    import tifffile
+    for c in ("Control", "control", "Other"):
+        (tmp_path / "E" / c / "R1").mkdir(parents=True)
+        tifffile.imwrite(tmp_path / "E" / c / "R1" / "a.tif", np.zeros((4, 4), np.uint8))
+    with pytest.raises(ValueError, match="upper/lower case"):
+        scan_experiment(tmp_path / "E")
+
+
+def test_an_unreadable_image_is_left_out_not_a_dead_end(experiment, tmp_path):
+    from guessthecondition import load_for_display
+    s = Session.create(experiment, tmp_path, "Ana", 100, seed=2)
+    first = s.serve()["path"]
+    first.write_bytes(b"not a tiff")
+    item, data, skipped = s.serve_readable(load_for_display)
+    assert skipped == [first.name] and item["path"] != first and data.ndim == 3
+    reopened = Session.open(tmp_path, "Ana")
+    assert reopened.total == 35 and reopened.status()["unreadable_images_left_out"] == 1
+    assert reopened.table["skipped"].notna().sum() == 1
 
 
 def test_guess_by_number_and_unknown_guess(experiment, tmp_path):
@@ -142,3 +196,22 @@ def test_results_of_the_first_versions_can_be_resumed(experiment, tmp_path):
     assert s.n_answered == 1 and s.answered().loc[0, "decision_time_s"] == 3.5
     assert s.answered().loc[0, "image_file"] == "Control/R1/FOV1.tif"
     assert s.serve()["number"] == 2
+
+
+def test_numeric_folder_names_survive_a_resume_and_the_analysis(tmp_path):
+    import tifffile
+    from guessthecondition import analyze, read_results
+    for c in ("10", "20"):
+        for r in ("1", "2", "3"):
+            (tmp_path / "E" / c / r).mkdir(parents=True)
+            for i in range(2):
+                tifffile.imwrite(tmp_path / "E" / c / r / ("a%d.tif" % i), np.zeros((4, 4), np.uint8))
+    s = Session.create(tmp_path / "E", tmp_path / "R", "Ana", 100, seed=1)
+    for _ in range(4):
+        s.serve(now=0)
+        truth = s.table.loc[s.table["image_file"] == s.state["pending"]["image_file"], "condition"].iloc[0]
+        s.answer(truth, now=1)
+    again = Session.open(tmp_path / "R", "Ana")           # re-read from the CSV
+    assert again.conditions == ["10", "20"] and set(again.table["biological_repeat"]) == {"1", "2", "3"}
+    saved = read_results(tmp_path / "R" / "Ana" / "game_results.csv")
+    assert analyze(saved).accuracy == 1.0 and analyze(again.table).correct == 4

@@ -3,17 +3,22 @@
 The rules follow the other MorphoBricks tools (MorphoCoverage):
 
 - **The biological repeat is the replicate.** Images of one repeat are not independent, so the answer to "can the conditions be
-  told apart?" is the accuracy of every repeat compared with chance across the repeats (a one-sided t-test on the repeats'
-  accuracy minus chance, from 3 repeats), reported with n and the 95% interval. The test on all images pooled (exact binomial)
-  is shown beside it as *exploratory*: it counts every image as independent, so its false-positive chance is higher than stated.
-- **Words say what was found**: ✅ distinguishable across repeats, ⚠️ trend only, ➖ no conclusion possible (or not above chance),
-  ❌ check the data first. It never says "confirmed". A null result is a result, said as one.
-- **Pilots get advice, not verdicts.** With one or two repeats the numbers are shown and the design is said, not judged.
-- **A usual design is not flagged.** Only a measured property of these data is noted (a repeat with very few guesses).
+  told apart across repeats?" is the accuracy of every repeat compared with chance across the repeats (a one-sided t-test on the
+  repeats' accuracy minus chance, from 3 repeats), reported with n and the 95% interval.
+- **A randomization test answers for the images that were played** and works with one or two repeats: the true conditions are
+  shuffled among the guessed images of the same repeat (10 000 times, seeded) and the accuracy is compared with the shuffled ones.
+  It says whether *these guesses* beat chance on *these images*, not whether the effect repeats; it counts the images as
+  independent, so it is *exploratory* beside the test across repeats, and the lead answer for a pilot (one or two repeats).
+- **Words say what was found**: ✅ distinguishable across repeats, ⚠️ a trend, or above chance in a pilot, ➖ no conclusion
+  possible (or not above chance), ❌ check the data first. It never says "confirmed". A null result is said as a result.
+- **A usual design is not flagged.** Only a measured property of these data is noted (a repeat with very few guesses, a repeat
+  that holds one condition only).
 - Nothing is pooled silently: per-repeat and per-condition tables come with the pooled figures.
 
-Chance is the accuracy of an observer who ignores the images and always names the most common condition of what was tested
-(1 / number of conditions when it is balanced, as the stratified order makes it).
+**Chance** is the accuracy of an observer who ignores the images and always names the most common condition: its share of the
+images of the experiment (of the repeat, for each repeat), 1 / number of conditions when it is balanced. It is read from the
+whole table (the images not yet guessed are in it), not from the few that were guessed: a repeat with two guessed images of the
+same condition must not have a chance of 100%. ``analyze`` given only the guessed rows falls back on them.
 """
 
 from __future__ import annotations
@@ -44,7 +49,9 @@ class Analysis:
     chance: float
     ci_low: float
     ci_high: float
-    p_images: float
+    p_randomization: float
+    p_binomial: float
+    n_draws: int
     per_repeat: pd.DataFrame
     across: dict
     per_condition: pd.DataFrame
@@ -108,11 +115,39 @@ def _heterogeneity_p(table: pd.DataFrame, seed: int, draws: int = 5000) -> float
     return float((greater + 1) / (draws + 1))
 
 
+N_DRAWS = 10_000
+
+
+def randomization_p(conditions, guesses, repeats, draws: int = N_DRAWS, seed: int = 0) -> float:
+    """One-sided randomization p-value of the accuracy: the true conditions are shuffled among the guessed images *of the same
+    repeat* ``draws`` times (so the composition of every repeat is kept), and p is the share of shuffles that are at least as
+    accurate as the guesses, counting the observed one: ``(1 + #as good) / (1 + draws)`` (never 0; its smallest value is
+    ``1 / (draws + 1)``). Seeded. Valid with a single repeat: it asks whether these guesses beat chance on these images."""
+    conditions, guesses, repeats = np.asarray(conditions, dtype=str), np.asarray(guesses, dtype=str), np.asarray(repeats, dtype=str)
+    observed = int((conditions == guesses).sum())
+    rng = np.random.default_rng(seed)
+    correct = np.zeros(draws, dtype=np.int64)
+    for repeat in np.unique(repeats):
+        index = np.flatnonzero(repeats == repeat)
+        true, guessed = conditions[index], guesses[index]
+        chunk = max(1, min(draws, 2_000_000 // len(index)))
+        for start in range(0, draws, chunk):
+            m = min(chunk, draws - start)
+            shuffled = true[rng.random((m, len(index))).argsort(axis=1)]
+            correct[start : start + m] += (shuffled == guessed).sum(axis=1)
+    return float((1 + (correct >= observed).sum()) / (1 + draws))
+
+
 def analyze(table: pd.DataFrame, seed: int = 0) -> Analysis:
-    """Analyse the guessed images: a table with ``condition``, ``biological_repeat``, ``guess`` and (optionally)
-    ``decision_time_s``. Rows without a guess are ignored. Raises ``ValueError`` when nothing was guessed."""
+    """Analyse the guesses: a table with ``condition``, ``biological_repeat``, ``guess`` and (optionally) ``decision_time_s``.
+    Pass the whole table of the game (``session.table``, the images not yet guessed included): chance is read from the
+    composition of the experiment, not of the few images guessed. Raises ``ValueError`` when nothing was guessed."""
     from scipy import stats
 
+    population = table
+    if "skipped" in population.columns:
+        population = population[population["skipped"].isna()]
+    population = population[["condition", "biological_repeat"]].astype(str)
     table = table.dropna(subset=["guess"]).copy()
     if table.empty:
         raise ValueError("No image has been guessed yet: there is nothing to analyse.")
@@ -120,30 +155,42 @@ def analyze(table: pd.DataFrame, seed: int = 0) -> Analysis:
         table[column] = table[column].astype(str)
     table["right"] = table["condition"] == table["guess"]
     n, correct = len(table), int(table["right"].sum())
-    chance = _chance(table["condition"])
+    chance = _chance(population["condition"])
     low, high = _exact_interval(correct, n)
-    p_images = float(stats.binomtest(correct, n, chance, alternative="greater").pvalue)
+    p_binomial = float(stats.binomtest(correct, n, chance, alternative="greater").pvalue)
+    p_randomization = randomization_p(table["condition"], table["guess"], table["biological_repeat"], N_DRAWS, seed)
 
-    rows = []
+    rows, notes = [], []
     for repeat, group in table.groupby("biological_repeat", sort=True):
-        c = _chance(group["condition"])
+        design = population[population["biological_repeat"] == repeat]["condition"]
+        testable = design.nunique() >= 2          # a repeat that holds one condition only cannot be compared with chance
+        c = _chance(design) if testable else float("nan")
+        correct_r = int(group["right"].sum())
         rows.append(
             {
                 "biological_repeat": repeat,
                 "n": len(group),
-                "correct": int(group["right"].sum()),
+                "correct": correct_r,
                 "accuracy": float(group["right"].mean()),
                 "chance": c,
-                "accuracy_minus_chance": float(group["right"].mean() - c),
-                "p_exact_this_repeat": float(stats.binomtest(int(group["right"].sum()), len(group), c, alternative="greater").pvalue),
+                "accuracy_minus_chance": float(group["right"].mean() - c) if testable else float("nan"),
+                "p_exact_this_repeat": float(stats.binomtest(correct_r, len(group), c, alternative="greater").pvalue) if testable else float("nan"),
+                "testable": bool(testable),
             }
         )
+        if not testable:
+            notes.append("Repeat %s holds images of one condition only, so it cannot be compared with chance and is left out of the test across repeats." % repeat)
     per_repeat = pd.DataFrame(rows)
 
-    differences = per_repeat["accuracy_minus_chance"].to_numpy()
-    k = len(per_repeat)
-    across = {"n_repeats": k, "mean_difference": float(differences.mean()), "ci_low": float("nan"), "ci_high": float("nan"), "p": float("nan"), "repeats_above_chance": int((differences > 0).sum())}
-    if k >= 2 and not np.isnan(differences).any():
+    differences = per_repeat["accuracy_minus_chance"].dropna().to_numpy()
+    k = len(differences)
+    across = {
+        "n_repeats": k,
+        "mean_difference": float(differences.mean()) if k else float("nan"),
+        "ci_low": float("nan"), "ci_high": float("nan"), "p": float("nan"),
+        "repeats_above_chance": int((differences > 0).sum()),
+    }  # fmt: skip
+    if k >= 2:
         half = stats.t.ppf(0.975, k - 1) * stats.sem(differences)
         across["ci_low"], across["ci_high"] = float(differences.mean() - half), float(differences.mean() + half)
     if k >= MIN_REPEATS:
@@ -179,7 +226,7 @@ def analyze(table: pd.DataFrame, seed: int = 0) -> Analysis:
     else:
         decision_time = pd.DataFrame(columns=["condition", "biological_repeat", "n", "median", "q1", "q3"])
 
-    notes = [
+    notes += [
         "Repeat %s has only %d guessed image(s)." % (r["biological_repeat"], r["n"]) for _, r in per_repeat.iterrows() if r["n"] < FEW_GUESSES
     ]
     untested = sorted(set(table["guess"]) - set(table["condition"]))
@@ -187,7 +234,7 @@ def analyze(table: pd.DataFrame, seed: int = 0) -> Analysis:
         notes.append("%s was guessed but none of its images was tested." % ", ".join(untested))
 
     analysis = Analysis(
-        n=n, correct=correct, accuracy=correct / n, chance=chance, ci_low=low, ci_high=high, p_images=p_images,
+        n=n, correct=correct, accuracy=correct / n, chance=chance, ci_low=low, ci_high=high, p_randomization=p_randomization, p_binomial=p_binomial, n_draws=N_DRAWS,
         per_repeat=per_repeat, across=across, per_condition=per_condition, per_condition_repeat=per_condition_repeat,
         confusion=confusion, confusion_normalised=confusion_normalised, pairs=pairs, decision_time=decision_time,
         repeat_heterogeneity_p=_heterogeneity_p(table, seed), readout=Readout("", "", ""), notes=notes,
@@ -204,13 +251,21 @@ def _readout(a: Analysis) -> Readout:
     k, ac = a.across["n_repeats"], a.across
     repeats = "%d biological repeat%s" % (k, "" if k == 1 else "s")
     if k < MIN_REPEATS:
-        return Readout(
-            MARKERS["none"],
-            "No conclusion (n = %d)" % k,
-            "With %s the guesses cannot say whether the conditions can be told apart across repeats: the repeat is the replicate and a "
-            "test across repeats needs at least %d. Overall accuracy was %.0f%% against %.0f%% by chance (95%% interval %.0f-%.0f%%). "
-            "Next time, guess images from every repeat you have, or add repeats." % (repeats, MIN_REPEATS, 100 * a.accuracy, 100 * a.chance, 100 * a.ci_low, 100 * a.ci_high),
+        pr = a.p_randomization
+        interval = "accuracy %.0f%% against %.0f%% by chance (95%% interval %.0f-%.0f%%)" % (100 * a.accuracy, 100 * a.chance, 100 * a.ci_low, 100 * a.ci_high)
+        scope = (
+            "The repeat is the replicate and a test across repeats needs at least %d, so with %s this answers for the images you saw, "
+            "not for the experiment: randomization test (the true conditions shuffled within each repeat, %d times), p %s; %s. "
+            "Whether the effect repeats needs more biological repeats." % (MIN_REPEATS, repeats if k else "no repeat that holds two conditions", a.n_draws, _fmt_p(pr), interval)
         )
+        if k == 0:
+            return Readout(MARKERS["none"], "No conclusion (no repeat holds two conditions)", scope)
+        if pr <= ALPHA:
+            return Readout(MARKERS["partly"], "Above chance in a pilot (n = %d)" % k, "These guesses beat chance on these images. " + scope)
+        return Readout(
+            MARKERS["none"], "Not above chance in a pilot (n = %d)" % k,
+            "These guesses were not above chance on these images (a null result is a result; with so few images a modest ability could be missed). " + scope,
+        )  # fmt: skip
     p, d = ac["p"], ac["mean_difference"]
     above = "%d of %d repeats were above chance" % (ac["repeats_above_chance"], k)
     effect = "accuracy minus chance, mean %.0f points (95%% interval %.0f to %.0f), n = %d repeats" % (100 * d, 100 * ac["ci_low"], 100 * ac["ci_high"], k)
@@ -243,15 +298,16 @@ def summary_text(a: Analysis) -> str:
         "%s %s" % (a.readout.marker, a.readout.chip),
         a.readout.text,
         "",
-        "Images guessed: %d, correct: %d (accuracy %.1f%%, exact 95%% interval %.1f-%.1f%%); chance %.1f%% (always naming the most common condition)."
+        "Images guessed: %d, correct: %d (accuracy %.1f%%, exact 95%% interval %.1f-%.1f%%); chance %.1f%% (always naming the most common condition of the experiment)."
         % (a.n, a.correct, 100 * a.accuracy, 100 * a.ci_low, 100 * a.ci_high, 100 * a.chance),
-        "Exploratory, all images pooled: exact binomial p %s. It counts every image as independent, so its false-positive chance is higher than stated; the test across repeats above is the one to read."
-        % _fmt_p(a.p_images),
+        "Exploratory, the images you saw (randomization test, true conditions shuffled within each repeat, %d times): p %s. It counts every image as independent, so it does not say whether the effect repeats; with 3 or more repeats the test across repeats above is the one to read."
+        % (a.n_draws, _fmt_p(a.p_randomization)),
         "",
-        "By biological repeat (n = %d):" % ac["n_repeats"],
+        "By biological repeat (n = %d compared with chance):" % ac["n_repeats"],
     ]
     lines += [
-        "- %s: %d/%d correct, %.1f%% (chance %.1f%%)" % (r.biological_repeat, r.correct, r.n, 100 * r.accuracy, 100 * r.chance) for r in a.per_repeat.itertuples()
+        "- %s: %d/%d correct, %.1f%% (chance %s)" % (r.biological_repeat, r.correct, r.n, 100 * r.accuracy, "%.1f%%" % (100 * r.chance) if r.testable else "n/a: one condition only")
+        for r in a.per_repeat.itertuples()
     ]
     if a.repeat_heterogeneity_p == a.repeat_heterogeneity_p:
         lines.append("Exploratory: do the repeats differ in accuracy? permutation p %s." % _fmt_p(a.repeat_heterogeneity_p))

@@ -23,7 +23,7 @@ def _tools():
 
 
 def test_declarations_are_valid():
-    assert set(_tools()) == {"prepare_game", "play_round", "undo_last_guess", "analyze_results"}
+    assert set(_tools()) == {"create_demo_experiment", "prepare_game", "play_round", "undo_last_guess", "analyze_results"}
 
 
 def test_importing_the_declarations_stays_light():
