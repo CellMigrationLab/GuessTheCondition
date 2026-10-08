@@ -21,6 +21,7 @@ from typing import Annotated, Optional
 
 from labconstrictor_tools import (
     Advanced,
+    Axes,
     ChoicesFrom,
     ClearAfterRun,
     Description,
@@ -33,11 +34,12 @@ from labconstrictor_tools import (
     MessageOut,
     Min,
     Name,
-    Axes,
     Replace,
     Scalars,
     TableOut,
     ToolError,
+    Unit,
+    Widget,
     check_cancel,
     progress,
     tool,
@@ -76,7 +78,7 @@ def prepare_game(
     results_folder: _RESULTS,
     user_name: _USER = "YourName",
     percentage_to_test: Annotated[
-        int, Min(1), Max(100), Group("Game"), Description("Share of the images you will guess (rounded up); images are spread over the conditions and repeats")
+        int, Min(1), Max(100), Widget("slider"), Unit("%"), Label("Percentage to guess"), Group("Game"), Description("Share of the images you will guess (rounded up); images are spread over the conditions and repeats")
     ] = 20,
     restart: Annotated[bool, Group("Game"), Description("Start again: your earlier results are kept as a backup. Unticked, an existing game is resumed")] = False,
     random_seed: Annotated[Optional[int], Min(0), Group("Game"), Advanced(), Description("Seed of the order of the images; unset = a random one, kept with the game")] = None,
