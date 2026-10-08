@@ -55,6 +55,7 @@ def test_a_guess_is_optional_and_every_other_parameter_has_a_default_or_is_a_fol
 def test_percentage_is_bounded():
     p = next(p for p in _tools()["prepare_game"]["inputs"] if p["name"] == "percentage_to_test")
     assert (p["minimum"], p["maximum"], p["default"]) == (1, 100, 20)
+    assert p["widget"] == "slider" and p["unit"] == "%"  # an IntSlider ("% to guess") in the notebook too
 
 
 def test_play_round_uses_the_interaction_hints():
