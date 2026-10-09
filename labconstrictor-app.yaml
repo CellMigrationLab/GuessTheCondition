@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://labconstrictor.cellmig.org/schema/labconstrictor-app.schema.json
+schema: 1
+name: Guess the Condition
+summary: A blinded test of whether experimental conditions can be told apart by eye, with statistics across biological repeats.
+description: |-
+  You see randomised images without their condition and guess it. The app records your guesses and decision times, then reports whether the conditions can be told apart across biological repeats, with accuracy against chance and a confusion matrix.
+kind: utility
+hosts: [notebook, napari, fiji]
+distribution:
+  installer: true
+  colab:
+    - label: Notebook
+      url: https://colab.research.google.com/github/CellMigrationLab/GuessTheCondition/blob/main/notebooks/GuessTheCondition/GuessTheCondition.ipynb
+license: MIT
+categories: [experimental design, blinding]
