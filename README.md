@@ -1,115 +1,94 @@
 <div align="center">
 
-<img src="app/logo/logo.png" width="420" alt="Guess the Condition logo"/>
+<img src="app/logo/logo.png" width="360" alt="Guess the Condition logo"/>
 
 # Guess the Condition
 
-**Can the experimental conditions be told apart by looking at the images?** Guess the Condition shows you images without their condition, asks you to name it, and tells you whether you did better than chance *across the biological repeats*.
+**Can you tell experimental conditions apart just by looking at microscopy images?**
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/CellMigrationLab/GuessTheCondition/blob/main/notebooks/GuessTheCondition/GuessTheCondition.ipynb)
+Guess the Condition shows you images without revealing which condition each belongs to. You guess the condition, then see how often you were right, which conditions you confused, and how your results varied between biological repeats.
+
+[![Open the interactive notebook in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/CellMigrationLab/GuessTheCondition/blob/main/notebooks/GuessTheCondition/GuessTheCondition.ipynb)
+
+[Download the desktop app](https://github.com/CellMigrationLab/GuessTheCondition/releases) · [View the example notebook](notebooks/GuessTheCondition_API_Example/GuessTheCondition_API_Example.ipynb)
 
 </div>
 
----
+## Why use it?
 
-## What it is for
+Sometimes a difference looks obvious in one field of view but is much harder to spot across a whole experiment. This is a way to check whether someone can recognise the conditions **without knowing which image came from which condition**.
 
-Before investing in the quantification of a phenotype, ask a human: is it visible, and is it reproducible? You are presented with randomised images (spread over the conditions and the repeats), you guess each one's condition, and the tool records your guesses and your decision times, then reports:
+You see the available condition names, but not the true label or filename of the image on screen. The app records your answer and how long you took. It then shows the answers for each biological repeat, rather than treating all fields of view as independent experiments.
 
-- whether the conditions can be told apart **across biological repeats** (the repeat is the replicate), with n and the 95% interval;
-- the accuracy of every repeat and of every condition, against chance;
-- the confusion matrix and the pairs of conditions that get mistaken for each other;
-- the decision times (a SuperPlot);
-- a PDF report with the text, the figures and the tables.
+It is a check of **visual distinguishability**, not a substitute for measuring the phenotype or independently validating a biological effect.
 
-This repository brings together the former [Napari plugin](https://github.com/CellMigrationLab/napari-guess-the-condition) and [Colab notebook](https://github.com/CellMigrationLab/jupyter-guess-the-condition) in one [LabConstrictor](https://github.com/CellMigrationLab/LabConstrictor) app: one package, one set of results, four ways to play.
+## Get started
+
+**In Google Colab:** [open the interactive notebook](https://colab.research.google.com/github/CellMigrationLab/GuessTheCondition/blob/main/notebooks/GuessTheCondition/GuessTheCondition.ipynb). Run the first cell to install the package and connect Google Drive. Put your images in Drive first. Colab runs on Google's servers, so consider your data-sharing requirements.
+
+**On your computer:** [download an installer](https://github.com/CellMigrationLab/GuessTheCondition/releases) and follow the [installation guide](.tools/docs/download_executable.md). The published release has installers for Windows (x86-64), macOS (Apple Silicon and Intel), and Linux (x86-64); these files have not all been independently tested here. Launch the app, open the **GuessTheCondition** notebook from its JupyterLab welcome page, and run the cells in order. You do not need to write Python code.
+
+**No images to try yet?** The [Python API example](notebooks/GuessTheCondition_API_Example/GuessTheCondition_API_Example.ipynb) generates a small synthetic experiment and runs a simulated player. It illustrates the results but is not the interactive guessing game.
 
 ## Prepare your images
 
-One folder per condition, inside it one folder per biological repeat, inside it the TIFF images (`.tif` or `.tiff`):
+Use TIFF images (`.tif` or `.tiff`) in the following folder structure:
 
-```
-Experiments
-├── Control
-│   ├── R1   (FOV1.tif, FOV2.tif, ...)
-│   └── R2
-└── Mutant
-    ├── R1
-    └── R2
-```
-
-The folder names are the *condition* and the *biological repeat* of the images inside. 2D images, multi-channel images (shown side by side) and z-stacks or time series (shown as a maximum projection) all work. Every channel is contrast-stretched on its own (0.01-99.99 percentiles, like ImageJ's "Auto"), so the conditions have to be told apart by what the images show, not by their overall brightness.
-
-## Four ways to play (one game, any of them)
-
-Your game lives in a folder with your name inside the results folder (`game_results.csv` and `session.json`), so you can **stop in one and resume in another**.
-
-### 1. The desktop app (Windows, macOS, Linux)
-
-Download the installer from the [Releases page](https://github.com/CellMigrationLab/GuessTheCondition/releases) (see the [installation guide](.tools/docs/download_executable.md)), install it, and open **Guess the Condition** from your desktop or Start menu. The notebook walks you through three steps: prepare the game, guess, analyse. Apple-silicon Macs are supported; Intel Macs are not.
-
-### 2. Google Colab
-
-Press the *Open in Colab* badge above: the notebook installs the package and mounts your Google Drive.
-
-### 3. Napari and Fiji (tools)
-
-The installer also registers five tools for the [LabConstrictor tools bridge](https://github.com/CellMigrationLab/LabConstrictor-Tools), so that [Napari](https://github.com/CellMigrationLab/napari-labconstrictor) (Plugins > LabConstrictor tools) and [Fiji](https://github.com/CellMigrationLab/LabConstrictor-Fiji) (Plugins > LabConstrictor > LabConstrictor Tools...) show them as forms, and so that the command line can run them:
-
-| Tool | What it does |
-|---|---|
-| **Create a demo experiment** | Makes a small synthetic experiment (two conditions, three repeats) to try the game before using your own images. |
-| **Prepare the game** | Scans the experiment folder and starts (or resumes) your game. |
-| **Play a round** | Records your guess for the image on screen (a condition name or its number; leave it unset the first time) and shows the next image. The condition is never shown. |
-| **Undo my last guess** | Forgets the last guess; that image is shown again. |
-| **Analyse the results** | The answer, tables and the PDF report. |
-
-In Napari, the guess field keeps its value between runs: change it for every image. The tool tells you what it recorded every time, and **Undo my last guess** takes a mistake back.
-
-From a terminal (use the Python of the installed app):
-
-```
-<install folder>/bin/python -m labconstrictor_tools run GuessTheCondition create_demo_experiment output_folder=.      # optional, to try the game
-<install folder>/bin/python -m labconstrictor_tools run GuessTheCondition prepare_game experiment_folder=Experiments results_folder=Results user_name=Ana
-<install folder>/bin/python -m labconstrictor_tools run GuessTheCondition play_round results_folder=Results user_name=Ana
-<install folder>/bin/python -m labconstrictor_tools run GuessTheCondition play_round results_folder=Results user_name=Ana guess=Mutant
+```text
+Experiment/
+├── Control/
+│   ├── R1/
+│   │   ├── FOV1.tif
+│   │   └── FOV2.tif
+│   ├── R2/
+│   └── R3/
+└── Treated/
+    ├── R1/
+    ├── R2/
+    └── R3/
 ```
 
-### 4. Python
+The first folder level names the **conditions**; the second names the **biological repeats**. You need at least two conditions. Use a separate repeat identifier for each independent experiment, not for every image or field of view. The app groups folders with the same repeat name together across conditions. To compare accuracy across repeats, each repeat needs images from at least two conditions.
 
-```python
-from guessthecondition import Session, analyze
+Three or more independent, usable repeats are recommended for the main statistical comparison. A small number of images per repeat gives an imprecise result, even if the overall image count is large.
 
-session = Session.create("Experiments", "Results", user_name="Ana", percentage_to_test=20)
-item = session.serve()        # {"number", "of", "path"}: nothing that names the condition
-session.answer("Mutant")      # a condition name or its number; records the decision time
-analysis = analyze(session.answered())
-print(analysis.text())
-```
+The game accepts 2D, multichannel and stack/time-series TIFF images. Channels are displayed separately, and stacks or time series are normally shown as maximum-intensity projections. **Check that this display suits your question:** if TIFF axis metadata is ambiguous, a short stack can be interpreted as channels instead.
 
-`notebooks/GuessTheCondition_API_Example` runs a whole game with a simulated player. `pip install "guessthecondition @ git+https://github.com/CellMigrationLab/GuessTheCondition"` installs the package alone.
+## Play and see the results
 
-## How the results are read
+1. **Step 0 — Initialise:** Run the setup cell in the notebook.
+2. **Step 1 — Prepare:** Enter the experiment folder, a results folder and an identifier for yourself. Choose what percentage of the images to guess (20% by default), then click **Prepare the game**.
+3. **Step 2 — Guess:** Click **Start / continue**, choose a condition and click **Submit guess**. Images are shown in a shuffled order spread across conditions and repeats. Use **Undo last guess** to correct a mistake.
+4. **Step 3 — Analyse:** Run the analysis cell whenever you have guesses to examine. It displays the summary, figures and tables and writes a PDF report.
 
-The rules are those of the other MorphoBricks tools ([MorphoCoverage](https://github.com/CellMigrationLab/MorphoCoverage)):
+Your files are saved under `<results folder>/<your identifier>/`:
 
-- **The biological repeat is the replicate.** Images of one repeat are not independent. The answer is the accuracy of each repeat compared with chance across the repeats (a one-sided t-test on accuracy minus chance, from 3 repeats). Chance is the share of the most common condition in your experiment, so an unbalanced design is not flattered. Images of the same repeat folder name count as the same biological repeat. With one or two repeats there is no verdict about the experiment; instead a **randomization test** says whether you beat chance on *these images* (true labels are shuffled within each repeat, 10 000 times). It is exploratory and does not generalise to new repeats.
-- **Chance** is the accuracy of someone who ignores the images and always names the most common condition (1 / number of conditions when balanced, as the order of the images makes them).
-- The test on **all images pooled** (exact binomial) and the test of whether the repeats differ are shown as *exploratory*: they count every image as independent, so their false-positive chance is higher than stated.
-- ✅ the conditions can be told apart across repeats · ⚠️ a trend only · ➖ no conclusion possible, or not above chance · ❌ check the data first. It never says "confirmed", and a null result is said as a result.
-- Nothing is pooled silently: the per-repeat and per-condition tables come with the pooled figures.
+- `game_results.csv` — one row per image, including the true condition, your guesses and decision times.
+- `session.json` — information needed to continue your game.
+- `analysis/analysis_results.pdf` — the report; the same folder also contains figures and tables.
 
-## Development
+You can close the notebook and continue later using the same results folder and identifier, provided the original experiment is still available at its saved path. **Colab and desktop do not automatically synchronise files or paths.** Choosing **Start again** creates backups of the previous results.
 
-```
-pip install -e . pytest labconstrictor-tools
-pytest tests                                             # the package, the notebook helpers and the tool declarations
-python lc_tests/make_fixtures.py lc_tests/fixtures
-labconstrictor-tools test --module guessthecondition_lc_tools --pythonpath src --cases lc_tests/cases.json
-```
+## How to read the answer
 
-`src/guessthecondition` is the API (`dataset`, `images`, `session`, `analysis`, `report`); `src/guessthecondition_lc_tools` declares the tools (its name must be `<package>_lc_tools` for the installer to register it) and imports the package only inside the functions.
+The report compares your accuracy with a simple baseline: always guessing the most common condition in the experiment. It includes accuracy per biological repeat and per condition, a confusion matrix showing mistaken identities, and decision-time plots.
+
+With **at least three usable biological repeats**, the main statistical comparison is based on each repeat's accuracy relative to its own chance level. With **one or two**, the app reports an exploratory test of the images shown, not evidence that the result will reproduce in other experiments. Tests pooling individual images are also exploratory: multiple fields of view do not become independent biological repeats.
+
+An above-chance result means that a person could recognise a pattern in these images under these viewing conditions. It does not establish what caused that pattern. Conversely, a result close to chance does not prove the conditions are identical.
+
+**Important display limitation:** Each channel is contrast-stretched independently (0.01–99.99th percentiles). Absolute brightness differences are therefore not preserved. Do not use the game to test whether conditions differ only in fluorescence intensity. Review the displayed images before interpreting the result.
+
+Unreadable images are skipped and flagged during play; check any warnings before trusting the report.
+
+## Other ways to use it
+
+The same game functions can be accessed through the experimental [napari](https://github.com/CellMigrationLab/napari-labconstrictor) and [Fiji](https://github.com/CellMigrationLab/LabConstrictor-Fiji) integrations, with [LabConstrictor Tools](https://github.com/CellMigrationLab/LabConstrictor-Tools) installed. They use the local experiment and results files; installing the desktop app does not by itself install the host plugins.
+
+If you want to automate the workflow, start with the [Python API example notebook](notebooks/GuessTheCondition_API_Example/GuessTheCondition_API_Example.ipynb).
+
+For installation or usage problems, [open an issue](https://github.com/CellMigrationLab/GuessTheCondition/issues).
 
 ## Licence and credits
 
-MIT. Created by [Guillaume Jacquemet](https://cellmig.org/) and the Cell Migration Lab. Built with [LabConstrictor](https://github.com/CellMigrationLab/LabConstrictor).
+MIT, see [LICENSE](LICENSE). Developed by the Cell Migration Lab. Packaged with [LabConstrictor](https://github.com/CellMigrationLab/LabConstrictor).
