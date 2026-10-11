@@ -9,9 +9,12 @@ hosts: [notebook, napari, fiji]
 distribution:
   installer: true
   colab:
-    - label: Notebook
+    - label: Interactive game
       url: https://colab.research.google.com/github/CellMigrationLab/GuessTheCondition/blob/main/notebooks/GuessTheCondition/GuessTheCondition.ipynb
+    - label: Python API example (synthetic data)
+      url: https://colab.research.google.com/github/CellMigrationLab/GuessTheCondition/blob/main/notebooks/GuessTheCondition_API_Example/GuessTheCondition_API_Example.ipynb
 license: MIT
+icon: app/logo/guessthecondition.png
 categories: [experimental design, blinding]
 inputs:
   - "TIFF images (.tif or .tiff): one folder per condition, inside it one folder per biological repeat"
