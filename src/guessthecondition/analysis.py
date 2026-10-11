@@ -1,6 +1,6 @@
 """What the guesses say: accuracy against chance, across biological repeats, per condition, confusion, decision time.
 
-The rules follow the other MorphoBricks tools (MorphoCoverage):
+Interpretation rules:
 
 - **The biological repeat is the replicate.** Images of one repeat are not independent, so the answer to "can the conditions be
   told apart across repeats?" is the accuracy of every repeat compared with chance across the repeats (a one-sided t-test on the
@@ -83,7 +83,7 @@ def _exact_interval(correct: int, n: int, level: float = 0.95) -> tuple[float, f
 
 def _paired_t(differences: np.ndarray) -> float:
     """One-sided (greater) t-test of ``differences`` (one per repeat) against 0; NaN when they do not vary or one is missing
-    (the same rule as MorphoCoverage's ``paired_t``, here one-sided because the question is 'better than chance')."""
+    (the test is one-sided because the question is whether accuracy exceeds chance)."""
     from scipy import stats
 
     differences = np.asarray(differences, dtype=float)
