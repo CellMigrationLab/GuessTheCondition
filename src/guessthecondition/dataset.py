@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 IMAGE_SUFFIXES = (".tif", ".tiff")
-# Column names shared with the other MorphoBricks tables (condition, biological_repeat, image_file).
+# Column names used throughout the game and analysis (condition, biological_repeat, image_file).
 DATASET_COLUMNS = ["image_file", "condition", "biological_repeat"]
 
 STRUCTURE_HELP = (
