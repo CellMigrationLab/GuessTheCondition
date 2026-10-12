@@ -83,7 +83,7 @@ Unreadable images are skipped and flagged during play; check any warnings before
 
 ## Other ways to use it
 
-The same game functions can be accessed through the experimental [napari](https://github.com/CellMigrationLab/napari-labconstrictor) and [Fiji](https://github.com/CellMigrationLab/LabConstrictor-Fiji) integrations, with [LabConstrictor Tools](https://github.com/CellMigrationLab/LabConstrictor-Tools) installed. They use the local experiment and results files; installing the desktop app does not by itself install the host plugins.
+The same game functions can be accessed through the experimental [napari](https://github.com/CellMigrationLab/LabConstrictor-napari) and [Fiji](https://github.com/CellMigrationLab/LabConstrictor-Fiji) integrations, with [LabConstrictor Tools](https://github.com/CellMigrationLab/LabConstrictor-Tools) installed. They use the local experiment and results files; installing the desktop app does not by itself install the host plugins.
 
 If you want to automate the workflow, start with the [Python API example notebook](notebooks/GuessTheCondition_API_Example/GuessTheCondition_API_Example.ipynb).
 
