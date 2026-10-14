@@ -5,7 +5,7 @@ summary: A blinded test of whether experimental conditions can be told apart by 
 description: |-
   You see randomised images without their condition and guess it. The app records your guesses and decision times, then reports whether the conditions can be told apart across biological repeats, with accuracy against chance and a confusion matrix.
 kind: utility
-hosts: [notebook, napari, fiji]
+hosts: [notebook, napari, fiji, qupath]
 distribution:
   installer: true
   colab:

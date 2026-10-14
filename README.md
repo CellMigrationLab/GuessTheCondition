@@ -81,9 +81,20 @@ An above-chance result means that a person could recognise a pattern in these im
 
 Unreadable images are skipped and flagged during play; check any warnings before trusting the report.
 
-## Other ways to use it
+## Other ways to use it: Napari, Fiji and QuPath
 
-The same game functions can be accessed through the experimental [napari](https://github.com/CellMigrationLab/LabConstrictor-napari) and [Fiji](https://github.com/CellMigrationLab/LabConstrictor-Fiji) integrations, with [LabConstrictor Tools](https://github.com/CellMigrationLab/LabConstrictor-Tools) installed. They use the local experiment and results files; installing the desktop app does not by itself install the host plugins.
+Besides the notebook, the same game runs inside **Napari**, **Fiji** and **QuPath** through the LabConstrictor tools bridge: the desktop installer registers the app's tools (`src/guessthecondition_lc_tools`), and each host lists **Guess the Condition** with one form per tool. The images are shown by the host (Napari layer, Fiji window, QuPath preview) and the game runs in the app's own environment, so the hosts never import it. They use the same experiment and results folders as the notebook, so a game started in one place can be continued in another.
+
+| Tool | What it does |
+|---|---|
+| **Create a demo experiment** | Makes a small synthetic experiment (two conditions, three repeats) in a folder you choose, to try the game |
+| **Prepare the game** | Scans your experiment folder and starts or resumes your game; you choose the share of images to guess |
+| **Show the conditions** | Lists the condition names you can use as a guess |
+| **Play a round** | Records your guess (a condition name or its number) and shows the next image; the true condition is never shown |
+| **Undo my last guess** | Forgets the last guess, and that image is shown again |
+| **Analyse the results** | Accuracy against chance across the biological repeats, per condition, the confusion matrix and decision times, plus a PDF report |
+
+How to install and use the Napari, Fiji and QuPath plugins is described in the [LabConstrictor-Tools documentation](https://github.com/CellMigrationLab/LabConstrictor-Tools/tree/main/docs) and in the READMEs of [LabConstrictor-napari](https://github.com/CellMigrationLab/LabConstrictor-napari), [LabConstrictor-Fiji](https://github.com/CellMigrationLab/LabConstrictor-Fiji) and [LabConstrictor-QuPath](https://github.com/CellMigrationLab/LabConstrictor-QuPath).
 
 If you want to automate the workflow, start with the [Python API example notebook](notebooks/GuessTheCondition_API_Example/GuessTheCondition_API_Example.ipynb).
 
