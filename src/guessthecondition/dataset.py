@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Iterable
 
 import pandas as pd
 
@@ -48,15 +49,20 @@ def scan_experiment(folder) -> pd.DataFrame:
     if not rows:
         raise ValueError("No TIFF image was found in %s.\n%s" % (folder, STRUCTURE_HELP))
     table = pd.DataFrame(rows, columns=DATASET_COLUMNS)
-    names = pd.Series(table["condition"].unique())
-    clash = names[names.str.lower().duplicated(keep=False)]
-    if len(clash):
-        raise ValueError("Conditions that differ only in upper/lower case cannot be told apart in a guess: %s. Rename one folder." % ", ".join(sorted(clash)))
+    check_conditions_distinct(table["condition"].unique())
     if table["condition"].nunique() < 2:
         raise ValueError(
             "Only one condition was found (%s): the game needs at least two.\n%s" % (table["condition"].iloc[0], STRUCTURE_HELP)
         )
     return table
+
+
+def check_conditions_distinct(names: Iterable[str]) -> None:
+    """Refuse condition names that differ only in upper/lower case (they could not be told apart in a guess)."""
+    names = pd.Series(list(names), dtype=object)
+    clash = names[names.str.lower().duplicated(keep=False)]
+    if len(clash):
+        raise ValueError("Conditions that differ only in upper/lower case cannot be told apart in a guess: %s. Rename one folder." % ", ".join(sorted(clash)))
 
 
 def describe(table: pd.DataFrame) -> str:

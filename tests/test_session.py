@@ -85,16 +85,12 @@ def test_numeric_condition_names_disable_numbers(tmp_path):
         s.resolve_guess("3")
 
 
-def test_conditions_that_differ_only_in_case_are_refused(tmp_path):
-    import tifffile
-    (tmp_path / "probe").mkdir()
-    if (tmp_path / "PROBE").exists():  # macOS and Windows: such two folders cannot exist, so there is nothing to refuse
-        pytest.skip("this file system ignores upper/lower case in folder names")
-    for c in ("Control", "control", "Other"):
-        (tmp_path / "E" / c / "R1").mkdir(parents=True)
-        tifffile.imwrite(tmp_path / "E" / c / "R1" / "a.tif", np.zeros((4, 4), np.uint8))
-    with pytest.raises(ValueError, match="upper/lower case"):
-        scan_experiment(tmp_path / "E")
+def test_conditions_that_differ_only_in_case_are_refused() -> None:
+    from guessthecondition.dataset import check_conditions_distinct
+    with pytest.raises(ValueError, match="upper/lower case") as err:
+        check_conditions_distinct(["Control", "control", "Other"])
+    assert "Control, control" in str(err.value) and "Other" not in str(err.value).split(":")[1]
+    check_conditions_distinct(["Control", "Mutant", "Control2"])  # distinct names pass
 
 
 def test_an_unreadable_image_is_left_out_not_a_dead_end(experiment, tmp_path):
