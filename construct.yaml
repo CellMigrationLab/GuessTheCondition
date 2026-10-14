@@ -1,17 +1,16 @@
 name: GuessTheCondition
-version: 0.0.0
+version: 0.0.1
 environment_file: environment.yaml
 installer_type: all
 license_file: LICENSE
 welcome_image: app/logo/logo.png
 header_image: app/logo/logo.png
 icon_image: app/logo/guessthecondition.png
-conclusion_text: Thank you! You have successfully installed GuessTheCondition 0.0.0.
+conclusion_text: Thank you! You have successfully installed GuessTheCondition 0.0.1.
 keep_pkgs: false
 register_python: false
 initialize_conda: false
 extra_files:
-- .tools/meta/src_change.yaml: GuessTheCondition/src_change.yaml
 - app/bash_bat_scripts/pre_uninstall.sh: pre_uninstall.sh
 - app/bash_bat_scripts/uninstall.sh: uninstall.sh
 - app/logo/guessthecondition.icns: GuessTheCondition/guessthecondition.icns
@@ -23,6 +22,7 @@ extra_files:
 - app/python_scripts/include_path.py: GuessTheCondition/include_path.py
 - app/python_scripts/launch_jupyter.py: GuessTheCondition/launch_jupyter.py
 - construct.yaml: GuessTheCondition/construct.yaml
+- labconstrictor-app.yaml: GuessTheCondition/labconstrictor-app.yaml
 - notebooks/GuessTheCondition/GuessTheCondition.ipynb: GuessTheCondition/notebooks/GuessTheCondition/GuessTheCondition.ipynb
 - notebooks/GuessTheCondition_API_Example/GuessTheCondition_API_Example.ipynb: GuessTheCondition/notebooks/GuessTheCondition_API_Example/GuessTheCondition_API_Example.ipynb
 - notebooks/notebook_latest_versions.yaml: GuessTheCondition/notebook_latest_versions.yaml
@@ -37,7 +37,6 @@ extra_files:
 - src/guessthecondition/report.py: GuessTheCondition/src/guessthecondition/report.py
 - src/guessthecondition/session.py: GuessTheCondition/src/guessthecondition/session.py
 - src/guessthecondition_lc_tools/__init__.py: GuessTheCondition/src/guessthecondition_lc_tools/__init__.py
-- labconstrictor-app.yaml: GuessTheCondition/labconstrictor-app.yaml
 post_install: app/bash_bat_scripts/post_install.bat # [win]
 post_install: app/bash_bat_scripts/post_install.sh # [unix]
 pre_uninstall: app/bash_bat_scripts/pre_uninstall.bat # [win]
