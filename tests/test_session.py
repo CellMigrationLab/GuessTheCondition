@@ -87,6 +87,9 @@ def test_numeric_condition_names_disable_numbers(tmp_path):
 
 def test_conditions_that_differ_only_in_case_are_refused(tmp_path):
     import tifffile
+    (tmp_path / "probe").mkdir()
+    if (tmp_path / "PROBE").exists():  # macOS and Windows: such two folders cannot exist, so there is nothing to refuse
+        pytest.skip("this file system ignores upper/lower case in folder names")
     for c in ("Control", "control", "Other"):
         (tmp_path / "E" / c / "R1").mkdir(parents=True)
         tifffile.imwrite(tmp_path / "E" / c / "R1" / "a.tif", np.zeros((4, 4), np.uint8))
