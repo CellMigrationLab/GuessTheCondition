@@ -15,7 +15,14 @@
       ],
       "platforms": {
         "win": {
-          "icon": "BASE_PATH_KEYWORD/GuessTheCondition/guessthecondition.ico"
+          "icon": "BASE_PATH_KEYWORD/GuessTheCondition/guessthecondition.ico",
+          "command": [
+            "{{ PYTHON }}",
+            "{{ PREFIX }}/GuessTheCondition/launch_jupyter.py",
+            "{{ PREFIX }}/GuessTheCondition/notebooks/Welcome.ipynb",
+            "&",
+            "exit"
+          ]
         },
         "linux": {
           "icon": "BASE_PATH_KEYWORD/GuessTheCondition/guessthecondition.png"
