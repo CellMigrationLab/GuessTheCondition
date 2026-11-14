@@ -67,6 +67,10 @@ IF EXIST "%GPU_REQUIREMENTS%" (
     echo GPU requirements file not found, installing CPU requirements from "%BASE_REQUIREMENTS%" >> "%LOG_FILE%"
 )
 
+REM A lock file (requirements*.lock.txt next to the requirements file: every package with its exact version, written by
+REM .tools/python/lock_requirements.py) is installed instead of the requirements file when the installer bundles one.
+SET "SELECTED_LOCK=%SELECTED_REQUIREMENTS:~0,-4%.lock.txt"
+IF EXIST "%SELECTED_LOCK%" SET "SELECTED_REQUIREMENTS=%SELECTED_LOCK%"
 echo Installing requirements from "%SELECTED_REQUIREMENTS%" >> "%LOG_FILE%"
 "%PYTHON_EXE%" -m pip install -r "%SELECTED_REQUIREMENTS%" >> "%LOG_FILE%" 2>&1
 IF ERRORLEVEL 1 (
@@ -74,9 +78,11 @@ IF ERRORLEVEL 1 (
     GOTO :fail
 )
 
+SET "WINDOWS_REQUIREMENTS=%PROJECT_ROOT%\requirements-windows.txt"
+IF EXIST "%PROJECT_ROOT%\requirements-windows.lock.txt" SET "WINDOWS_REQUIREMENTS=%PROJECT_ROOT%\requirements-windows.lock.txt"
 IF EXIST "%PROJECT_ROOT%\requirements-windows.txt" (
-    echo Installing Windows-specific requirements. >> "%LOG_FILE%"
-    "%PYTHON_EXE%" -m pip install -r "%PROJECT_ROOT%\requirements-windows.txt" >> "%LOG_FILE%" 2>&1
+    echo Installing Windows-specific requirements from "%WINDOWS_REQUIREMENTS%". >> "%LOG_FILE%"
+    "%PYTHON_EXE%" -m pip install -r "%WINDOWS_REQUIREMENTS%" >> "%LOG_FILE%" 2>&1
     IF ERRORLEVEL 1 (
         SET "FAILURE_MESSAGE=Windows-specific requirements installation failed."
         GOTO :fail
@@ -229,7 +235,7 @@ REM This step must never fail the installation: a failure is logged as a WARNING
 REM LC_TOOLS_SPEC can point to another source (wheel, git URL, mirror).
 REM Default source: the GitHub archive of the labconstrictor-tools release TAG below (a plain zip: no git needed on the user's computer),
 REM because the package is not on PyPI yet. Once it is, use "labconstrictor-tools" here. To move the pin, change only this tag.
-SET "LC_TOOLS_PIN=v0.3.0-alpha.1"
+SET "LC_TOOLS_PIN=v0.3.0-alpha.2"
 IF NOT DEFINED LC_TOOLS_SPEC SET "LC_TOOLS_SPEC=https://github.com/CellMigrationLab/LabConstrictor-Tools/archive/refs/tags/%LC_TOOLS_PIN%.zip"
 SET "LC_TOOLS_READY=0"
 "%PYTHON_EXE%" -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('guessthecondition_lc_tools') else 1)" >> "%LOG_FILE%" 2>&1

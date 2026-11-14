@@ -43,18 +43,24 @@ else
     echo "GPU requirements file not found, installing CPU requirements from $BASE_REQUIREMENTS" >> "$LOG_FILE"
 fi
 
+# A lock file (requirements*.lock.txt next to the requirements file: every package with its exact version, written by
+# .tools/python/lock_requirements.py) is installed instead of the requirements file when the installer bundles one.
+locked_requirements() {
+    if [ -f "${1%.txt}.lock.txt" ]; then echo "${1%.txt}.lock.txt"; else echo "$1"; fi
+}
+SELECTED_REQUIREMENTS="$(locked_requirements "$SELECTED_REQUIREMENTS")"
 echo "Installing requirements from $SELECTED_REQUIREMENTS" >> "$LOG_FILE"
 "$PYTHON_EXE" -m pip install -r "$SELECTED_REQUIREMENTS" >> "$LOG_FILE" 2>&1
 
 if [[ "${OSTYPE:-}" == "darwin"* ]]; then
     echo "Detected macOS platform" >> "$LOG_FILE"
     if [ -f "$PROJECT_ROOT/requirements-macos.txt" ]; then
-        "$PYTHON_EXE" -m pip install -r "$PROJECT_ROOT/requirements-macos.txt" >> "$LOG_FILE" 2>&1
+        "$PYTHON_EXE" -m pip install -r "$(locked_requirements "$PROJECT_ROOT/requirements-macos.txt")" >> "$LOG_FILE" 2>&1
     fi
 elif [[ "${OSTYPE:-}" == "linux-gnu"* ]]; then
     echo "Detected Linux platform" >> "$LOG_FILE"
     if [ -f "$PROJECT_ROOT/requirements-linux.txt" ]; then
-        "$PYTHON_EXE" -m pip install -r "$PROJECT_ROOT/requirements-linux.txt" >> "$LOG_FILE" 2>&1
+        "$PYTHON_EXE" -m pip install -r "$(locked_requirements "$PROJECT_ROOT/requirements-linux.txt")" >> "$LOG_FILE" 2>&1
     fi
 else
     echo "Unknown platform: ${OSTYPE:-unset}" >> "$LOG_FILE"
@@ -70,7 +76,7 @@ if [ -f "$PROJECT_ROOT/setup.py" ]; then
     # (it never fails the installation by itself). LC_TOOLS_SPEC can point to another source (wheel, git URL, mirror).
     # Default source: the GitHub archive of the labconstrictor-tools release TAG below (a plain zip: no git needed on the user's computer),
     # because the package is not on PyPI yet. Once it is, use "labconstrictor-tools" here. To move the pin, change only this tag.
-    LC_TOOLS_PIN="v0.3.0-alpha.1"
+    LC_TOOLS_PIN="v0.3.0-alpha.2"
     LC_TOOLS_MODULE="guessthecondition_lc_tools"
     LC_TOOLS_READY=0
     if "$PYTHON_EXE" -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('$LC_TOOLS_MODULE') else 1)" >> "$LOG_FILE" 2>&1; then
