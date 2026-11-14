@@ -6,6 +6,13 @@ description: |-
   You see randomised images without their condition and guess it. The app records your guesses and decision times, then reports whether the conditions can be told apart across biological repeats, with accuracy against chance and a confusion matrix.
 kind: utility
 hosts: [notebook, napari, fiji, qupath]
+host_requirements:   # the oldest LabConstrictor plugins this app needs (LabConstrictor-Tools #155)
+  napari:
+    min_version: 0.1.0-alpha.5
+  fiji:
+    min_version: 0.1.0-alpha.7
+  qupath:
+    min_version: 0.1.0-alpha.7
 distribution:
   installer: true
   colab:
