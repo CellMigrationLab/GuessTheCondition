@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://labconstrictor.cellmig.org/schema/labconstrictor-app.schema.json
+# yaml-language-server: $schema=https://cellmigrationlab.github.io/LabConstrictor-Site/schema/labconstrictor-app.schema.json
 schema: 1
 name: Guess the Condition
 summary: A blinded test of whether experimental conditions can be told apart by eye, with statistics across biological repeats.
